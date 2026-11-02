@@ -161,7 +161,10 @@ test("cli: --purge --before removes old files only", async () => {
   copyDir(fixtureData, dataDir);
   const oldFile = join(dataDir, "2026-07-01.jsonl");
   await import("node:fs/promises").then((fs) => fs.writeFile(oldFile, "{}\n", "utf8"));
-  const { code, stdout } = await runCli(["--purge", "--before", "30d", "--path", dataDir, "--json"]);
+  // 用固定的绝对截止时间：fixture 里的日期是写死的（2026-08-23），
+  // 若配合 "30d" 这类相对时长，随着真实时间推移 cutoff 会越过 fixture 日期而误删，
+  // 测试就会在某一天突然变红（2026-09-22 起 CI 一直失败就是这个原因）。
+  const { code, stdout } = await runCli(["--purge", "--before", "2026-08-01T00:00:00Z", "--path", dataDir, "--json"]);
   assert.equal(code, 0, stdout);
   const result = JSON.parse(stdout);
   assert.equal(result.removed_files, 1);
