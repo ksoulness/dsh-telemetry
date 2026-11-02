@@ -1,0 +1,40 @@
+name: CI · self-hosted (temp-burn-4)
+
+# 只允许手动触发：这台 runner 是公共仓库上的自托管机，
+# 用 workflow_dispatch 可以确保只有有写权限的人才能让它跑代码。
+on:
+  workflow_dispatch:
+    inputs:
+      note:
+        description: 这次跑的原因
+        required: false
+        default: 临时机验证
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: [self-hosted, linux, x64, dsh-build]
+    timeout-minutes: 20
+    steps:
+      - name: 检出
+        uses: actions/checkout@v4
+
+      - name: 机器与工具链
+        run: |
+          echo "runner: $RUNNER_NAME ($RUNNER_OS/$RUNNER_ARCH)"
+          echo "host:   $(uname -srm)"
+          echo "node:   $(node -v) / npm $(npm -v) / pnpm $(pnpm -v)"
+          echo "disk:   $(df -h / | tail -1 | awk '{print $4" free"}')"
+          echo "cpus:   $(nproc)"
+
+      - name: 语法检查 (npm run check)
+        run: npm run check
+
+      - name: 回归测试 (npm test)
+        run: npm test
+
+      - name: 摘要
+        if: always()
+        run: echo "job status = ${{ job.status }} · note = ${{ inputs.note }}"
